@@ -4,6 +4,11 @@ import java.awt.GridLayout;
 import java.awt.Label;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.util.ArrayList;
 
 import javax.sound.midi.MidiEvent;
@@ -18,7 +23,7 @@ public class MusicApp {
 	JFrame frame;
 	JPanel mainPanel;
 	ArrayList<JCheckBox> checkBoxList;
-	Sequencer sequencer;
+	public Sequencer sequencer;
 	Sequence sequence;
 	Track track;
 
@@ -28,8 +33,7 @@ public class MusicApp {
 	int[] instruments = {35,42,46,38,49,39,50,60,70,72,64,56,58,47,67,63};
 	
 	public static void main(String[] args) {
-		new MusicApp().userInterface();// newApp = new MusicApp();
-		//newApp.userInterface();	
+		new MusicApp().userInterface();
 	}
 	
 	public void userInterface() {
@@ -56,6 +60,14 @@ public class MusicApp {
 		JButton slow = new JButton("Slower");
 		slow.addActionListener(new SlowButtonListener());
 		buttonArea.add(slow);
+		
+		JButton save = new JButton("Save");
+		save.addActionListener(new SaveButtonListener());
+		buttonArea.add(save);
+		
+		JButton play = new JButton("PlayMyMusic");
+		play.addActionListener(new PlayMyMusicButtonListener());
+		buttonArea.add(play);
 		
 		Box nameArea = new Box(BoxLayout.Y_AXIS);
 		for (int i = 0; i < 16; i++) {
@@ -160,6 +172,64 @@ public class MusicApp {
 		}
 	}
 	
+	public class SaveButtonListener implements ActionListener {
+		public void actionPerformed(ActionEvent event) {
+			JFileChooser dataFile = new JFileChooser();
+			dataFile.showSaveDialog(frame);
+			saveFile(dataFile.getSelectedFile());
+		}
+	}
+	
+	private void saveFile(File file) {
+		boolean[] boxState = new boolean[256];
+		
+		for (int i = 0; i < boxState.length; i++) {
+			JCheckBox box = (JCheckBox) checkBoxList.get(i);
+			if(box.isSelected()) {
+				boxState[i] = true;
+			}
+			
+			try {
+				FileOutputStream fileStream = new FileOutputStream(file);
+				ObjectOutputStream os = new ObjectOutputStream(fileStream);
+				os.writeObject(boxState);
+			} catch (Exception ex) {
+				ex.printStackTrace();
+			}
+		}	
+	}
+	
+	public class PlayMyMusicButtonListener implements ActionListener {
+		public void actionPerformed(ActionEvent event) {
+			JFileChooser dataFile = new JFileChooser();
+			dataFile.showOpenDialog(frame);
+			openFile(dataFile.getSelectedFile());
+		}
+	}
+
+	private void openFile(File file) {
+			boolean[] boxState = null;
+			
+			try {
+				FileInputStream inputFile = new FileInputStream(file);
+				ObjectInputStream inputStream = new ObjectInputStream(inputFile);
+				boxState = (boolean[]) inputStream.readObject();
+			} catch (Exception ex) {
+				ex.printStackTrace();
+			}
+			
+			for (int i = 0; i < boxState.length; i++) {
+				JCheckBox box = (JCheckBox) checkBoxList.get(i);
+				if(boxState[i]) {
+					box.setSelected(true);
+				} else {
+					box.setSelected(false);
+				}
+			}
+			sequencer.stop();
+			createTrackAndPlay();
+	}
+
 	public void createTrack(int[] list) {
 		for (int i = 0; i < 16; i++) {
 			int key = list[i];
